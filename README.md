@@ -21,7 +21,7 @@ The code can be installed as is and can be run after setting up a virtual enviro
 | `cascade_layer.py` | `CDForestCascadeLayer` — one cascade layer of four forests with CDUM-based uncertainty filtering, weighting, and conformal aggregation. |
 | `feature_extraction.py` | Multiscale per-pixel feature extraction. |
 | `trajectory.ipynb` | Generate centerpoint of the lumen and visualize trajectory. |
-| `plotter.ipynb` | Find the trapping points (maxima) and plot the data for all instances. |
+| `trajectory_poi_selector_pipeline.ipynb` | Find the trapping points and plot the data for all instances. |
 
 
 ## Pipeline overview
