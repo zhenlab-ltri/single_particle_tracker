@@ -136,10 +136,7 @@ def track_one_step_cdum(gsrc, gtgt, gsrc_prev, gtgt_prev, pts, h, w,
         history (list, optional): List of (img, prev_img, pts, bbox) tuples used for CDForest training. Defaults to None.
         edge_mode (str | None, optional): 'upper_left', 'lower_right', or None for polygon mode. Defaults to None.
         need_prob (bool, optional): Whether to compute and return a probability field. Defaults to True.
-        anchor_sample (tuple, optional): A single (img, prev_img, pts, bbox) tuple treated as
-            permanent ground truth (e.g. the original seed frame) and given full,
-            undiminished weight in training regardless of the rolling history's decay.
-            Defaults to None.
+        anchor_sample (tuple, optional): A single (img, prev_img, pts, bbox) tuple treated as ground truth
 
     Returns:
         tuple[list, np.ndarray | None]: Tracked points as [[x, y], ...] and a probability field of shape (h, w), or None if need_prob is False.
@@ -205,13 +202,6 @@ def track_one_step_cdum(gsrc, gtgt, gsrc_prev, gtgt_prev, pts, h, w,
                            history=history, anchor_sample=anchor_sample)
 
     if ok:
-        # Use the raw, appearance-only field here, not the spatially-modulated one.
-        # This prob field feeds normal-direction boundary search downstream
-        # (optimize_contour_normals): the spatially-modulated field is highest at the
-        # centroid and monotonically decreasing outward BY CONSTRUCTION, so any search
-        # that climbs or follows it collapses toward the centroid regardless of where
-        # the true membrane actually is. The raw appearance field reflects local
-        # brightness/texture evidence only, which is what a genuine edge search needs.
         _, prob = cdf.predict_prob_field(gtgt, gtgt_prev, [ymin, ymax, xmin, xmax],
                                          shifted, h, w)
     else:
@@ -239,10 +229,7 @@ def safe_track_step(gsrc, gtgt, gsrc_prev, gtgt_prev, pts, h, w, resample_fn, n_
         history (list, optional): History tuples forwarded to track_one_step_cdum. Defaults to None.
         step_desc (str, optional): Description used in the warning log on failure. Defaults to "".
         edge_mode (str | None, optional): 'upper_left', 'lower_right', or None for polygon mode. Defaults to None.
-        need_prob (bool, optional): Whether to compute and return a probability field. Defaults to True.
-        anchor_sample (tuple, optional): A single (img, prev_img, pts, bbox) tuple treated as
-            permanent ground truth and given full, undiminished training weight, forwarded
-            to track_one_step_cdum. Defaults to None.
+        anchor_sample (tuple, optional): A single (img, prev_img, pts, bbox) tuple treated as ground truth, forwarded to track_one_step_cdum.
 
     Returns:
         tuple[list, np.ndarray | None]: Resampled points and a probability field, or None if need_prob is False.
