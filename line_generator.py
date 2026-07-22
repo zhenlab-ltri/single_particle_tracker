@@ -258,7 +258,6 @@ def create_csv(folders, boundary, input_path, output_path):
 
     with open(output_path, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
-        # Added 'node_spacing' as a 5th column header
         csv_writer.writerow(['frame_id', 'node_id', 'x_pixel', 'y_pixel', 'node_spacing'])
     
         for u_file, l_file in zip(upper_files, lower_files):
@@ -281,16 +280,14 @@ def create_csv(folders, boundary, input_path, output_path):
             skeleton_nodes = centerline(upper_pts, u_min, u_max, lower_pts, l_min, l_max, num_nodes=2000, trig_harmonics=3)
             
             if skeleton_nodes is not None:
-                # --- NEW STEP: Calculate the global node spacing for this specific frame ---
                 dx = np.diff(skeleton_nodes[:, 0])
                 dy = np.diff(skeleton_nodes[:, 1])
                 step_distances = np.sqrt(dx**2 + dy**2)
-                node_spacing = np.mean(step_distances) # Mean handles tiny float tolerances safely
+                node_spacing = np.mean(step_distances)
                 
                 for node_idx, (x_val, y_val) in enumerate(skeleton_nodes):
                     safe_x = np.clip(x_val, 0, width - 1)
                     safe_y = np.clip(y_val, 0, img_height - 1)
-                    # Appended the node_spacing constant to every row for this frame
                     csv_writer.writerow([frame_idx, node_idx, f"{safe_x:.4f}", f"{safe_y:.4f}", f"{node_spacing:.6f}"])
 
 
