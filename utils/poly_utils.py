@@ -68,15 +68,6 @@ def enforce_minimum_surface_area(mask, prob_field, initial_area, target_percenta
 def optimize_contour_normals(prob_field, reference_pts, target_img_u8, search_range=12):
     """Refine closed-contour points by finding the peak edge-probability along each normal.
 
-    Assumes prob_field comes from boundary-band training (see
-    ConformalDeepForestRegressor._boundary_fg_bg): low in the deep interior, peaking at
-    the true edge, low again in the deep exterior. A straightforward argmax over this
-    shape is safe -- unlike a bulk interior-vs-exterior field, where deep interior values
-    form a noisy plateau that can exceed the (comparatively modest) value right at the
-    true transition. With boundary-band training, both sides of the true edge are
-    explicitly trained low, so the maximum along the ray genuinely corresponds to the
-    edge itself.
-
     Args:
         prob_field (np.ndarray): Per-pixel edge-probability field of shape (h, w).
         reference_pts (list): Contour points as [[x, y], ...].
@@ -122,8 +113,6 @@ def optimize_contour_normals(prob_field, reference_pts, target_img_u8, search_ra
     f_val    = prob_field[iy_c, ix_c].astype(np.float32)
     inv_brt  = (255.0 - target_img_u8[iy_c, ix_c].astype(np.float32)) / 255.0
 
-    # Small darkness tiebreaker only -- the probability peak itself is the primary
-    # signal now that it genuinely corresponds to the edge, not a noisy plateau.
     scores   = f_val + 0.15 * inv_brt
     scores   = np.where(valid, scores, -1e9)
 
@@ -146,13 +135,6 @@ def optimize_contour_normals(prob_field, reference_pts, target_img_u8, search_ra
 
 def smooth_closed_contour(pts, iterations=3, alpha=0.5):
     """Couple a closed sequence of points to their neighbors via Laplacian smoothing.
-
-    Each point is pulled partway toward the average of its two neighbors, iterated a
-    few times. This is what gives the contour global consistency (a gently-bending,
-    non-jagged shape) as an explicit step, rather than relying on independent per-point
-    decisions to happen to agree with each other. Unlike a region-based smoothing
-    operation, this cannot collapse the shape toward a single point -- it only ever
-    locally averages neighboring positions, so the overall size/extent is preserved.
 
     Args:
         pts (list): Closed contour points as [[x, y], ...].
