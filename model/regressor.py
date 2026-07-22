@@ -59,29 +59,13 @@ class ConformalDeepForestRegressor:
         return [ymin, ymax, xmin, xmax]
 
     def _boundary_fg_bg(self, pts, h_roi, w_roi, img_roi=None, band=4):
-        """Generate boundary-band foreground and interior+exterior background masks.
-
-        Trains the classifier to recognize "is this pixel ON the drawn edge" rather than
-        "is this pixel inside the drawn polygon" -- foreground samples come from a thin
-        ring straddling the boundary; background samples come from safely deep interior
-        AND safely deep exterior alike. This is the closed-curve analogue of what
-        _line_fg_bg already does for open edges (comparing across the boundary, not
-        classifying bulk sides), and produces a probability field that peaks specifically
-        at the true edge/transition, rather than the plateau-with-a-cutoff a bulk
-        interior-vs-exterior classifier produces. A search over a plateau is vulnerable to
-        picking a noisy, non-monotonic interior value that happens to be higher than the
-        (comparatively modest) value right at the true boundary; a search for a genuine
-        peak does not have that failure mode, because both the deep interior and the deep
-        exterior are explicitly trained as background; only the edge itself scores high.
+        """Generate boundary as foreground and interior+exterior background masks.
 
         Args:
             pts (list): Polygon vertices as [[x, y], ...] in ROI-local coordinates.
             h_roi (int): Height of the ROI patch in pixels.
             w_roi (int): Width of the ROI patch in pixels.
-            img_roi (np.ndarray | None, optional): Grayscale ROI patch, dtype uint8. If
-                given, the boundary-band samples are further biased toward genuine
-                dark-to-light transitions (as opposed to any incidental ring of pixels),
-                mirroring _line_fg_bg's brightness-based side comparison. Defaults to None.
+            img_roi (np.ndarray | None, optional): Grayscale ROI patch, dtype uint8.
             band (int, optional): Half-width in pixels of the foreground boundary ring.
                 Defaults to 4.
 
@@ -106,8 +90,6 @@ class ConformalDeepForestRegressor:
         bg = np.logical_or(deep_interior == 1, deep_exterior == 1).astype(np.uint8)
 
         if int(fg.sum()) < 8:
-            # The polygon is too small/thin for a clean ring at this band width -- fall
-            # back to a simple one-sided ring so training still has usable samples.
             fg = np.logical_and(outer_ring == 1, filled == 0).astype(np.uint8)
 
         return fg, bg
@@ -214,14 +196,9 @@ class ConformalDeepForestRegressor:
                 newest, contributing with decaying weight the further back they are.
                 Defaults to None.
             anchor_sample (tuple, optional): A single (img, prev_img, pts, bbox) tuple
-                treated as permanent ground truth -- e.g. the original, user-verified seed
-                frame -- and given a full, undiminished sample budget regardless of how
-                much rolling history has accumulated. Without this, a purely positional
-                decay schedule (see below) means any anchor placed in the ordinary rolling
-                history eventually gets discounted down to a token few samples, so the
-                classifier ends up calibrated almost entirely against recent (and possibly
-                already-drifted) frames, with no real pull back toward the object's true
-                original appearance. Defaults to None.
+                treated as permanent ground truth and given a full, undiminished sample budget regardless of how
+                much rolling history has accumulated. Without this, any anchor placed in the ordinary rolling
+                history eventually gets discounted down. Defaults to None.
 
         Returns:
             bool: True if at least one cascade layer was successfully trained, False otherwise.
@@ -320,25 +297,14 @@ class ConformalDeepForestRegressor:
             h (int): Full frame height in pixels.
             w (int): Full frame width in pixels.
             spatial_sigma_factor (float, optional): Multiplier on the object's own estimated
-                radius used as the spatial-suppression Gaussian's std. Appearance features
-                (brightness, texture) cannot distinguish the tracked object from another,
-                separate structure with similar appearance -- only locality can. A smaller
-                factor suppresses similar-looking neighbors more aggressively; too small
-                and genuine fast motion/deformation gets penalized instead. Defaults to
-                0.85 (tighter than the previous hardcoded 1.25).
+                radius. Defaults to 0.85
 
         Returns:
             tuple[np.ndarray, np.ndarray]: (prob_field, raw_appearance_field), both shape
             (h, w), dtype float32. prob_field is the appearance score multiplied by a
-            spatial Gaussian centered on the current centroid -- appropriate for
-            suppressing far-away lookalikes, but NOT for local boundary search, since it
-            is by construction highest at the centroid and monotonically decreasing
-            outward everywhere, regardless of where the true membrane actually is.
+            spatial Gaussian centered on the current centroid.
             raw_appearance_field is the classifier's appearance score with no spatial
-            term applied -- use this wherever the consumer is trying to find or follow a
-            genuine local appearance transition (e.g. normal-direction edge search),
-            since climbing or following prob_field for that purpose will systematically
-            collapse toward the centroid instead of finding the real boundary.
+            term applied.
         """
         prob_field       = np.zeros((h, w), dtype=np.float32)
         raw_appearance   = np.zeros((h, w), dtype=np.float32)
