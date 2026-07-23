@@ -122,7 +122,7 @@ Along with upper and lower boudnaries, masks of a fixed point were generated as 
 
 ## Caveats 
 1. This training model predicts accurately only on noisy frames where the transitions between light/dark intensities or structures are apparent. High resolution images may result in the generation of conflicting probability fields by the model. 
-2. The predicitons are only an estimate due to the low training pathway and drifts can accumulate over a larger amount of frames. Therefore, it is recommended that users run it for upto 40-60 frames at a time and redraw the guideline for the following ones. Takes multiple tries since the classification is pixel-wise.
+2. The predicitons are only an estimate due to the low training pathway and drifts can accumulate over a larger amount of frames. Therefore, it is recommended that users run it for upto 40-60 frames at a time and redraw the guideline for the following ones. Takes multiple tries since the classification is pixel-wise and also very sensitive to contrast.
 3. The features are extracted on inverted pixels since the purpose of this model is to recognize darker features the region of interest. User has to change this in model/feature_extraction.py if they wish to track lighter structures.
 4. In order to load the background frames and layer frames from a folder of images, it was asusmed that the name of the files is a frame number so that the gui can easily match different layers with the background image. If the user's files have different naming conventions, this should be changed accordingly in mask_editor.py
 5. Only one line can be tracked at a time within a single layer with this mask_generation gui due to the format in which the drawn lines are processed. 
